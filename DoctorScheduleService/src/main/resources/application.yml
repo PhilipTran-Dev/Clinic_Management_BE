@@ -3,9 +3,9 @@ server:
 
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/clinic_management
+    url: jdbc:postgresql://localhost:5432/clinic_management_locals
     username: postgres
-    password: mysecretpassword
+    password: 123
     driver-class-name: org.postgresql.Driver
 
   jpa:
