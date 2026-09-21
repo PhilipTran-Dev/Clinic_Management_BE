@@ -39,4 +39,16 @@ public class SlotAssignment {
     @Builder.Default
     @Column(nullable = false)
     private AssignmentStatus status = AssignmentStatus.BOOKED;
+
+    @Column(name = "patient_name", nullable = false)
+    private String patientName;
+
+    @Column(name = "patient_phone")
+    private String patientPhone;
+
+    @Column(name = "insurance_code")
+    private String insuranceCode;
+
+    @Column(name = "chief_complaint", length = 500)
+    private String chiefComplaint;
 }

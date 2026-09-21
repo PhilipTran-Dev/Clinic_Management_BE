@@ -3,6 +3,7 @@ package Clinic_Management.DoctorScheduleService.controller;
 import Clinic_Management.DoctorScheduleService.dto.*;
 import Clinic_Management.DoctorScheduleService.entity.DoctorShift;
 import Clinic_Management.DoctorScheduleService.entity.Role;
+import Clinic_Management.DoctorScheduleService.entity.ShiftSession;
 import Clinic_Management.DoctorScheduleService.service.DoctorScheduleService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -60,5 +61,14 @@ public class DoctorScheduleController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestParam(required = false) Role role) {
         return ResponseEntity.ok(scheduleService.getStaffShifts(date, role));
+    }
+
+    @GetMapping("/roster/validate")
+    @Operation(summary = "Kiểm tra ca trực có đạt chuẩn (tối thiểu 1 BS Ngoại trú và 1 BS Nội trú) hay không")
+    public ResponseEntity<Boolean> validateRoster(
+            @RequestParam Long departmentId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam ShiftSession session) {
+        return ResponseEntity.ok(scheduleService.validateDepartmentRoster(departmentId, date, session));
     }
 }

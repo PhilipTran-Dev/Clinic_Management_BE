@@ -43,4 +43,7 @@ public class DoctorShift {
     @Builder.Default
     @Column(nullable = false)
     private Integer maxPatientsPerSlot = 4;
+
+    @Column(name = "room_number")
+    private String roomNumber; // room doctor will be assigned to for this shift
 }
