@@ -26,8 +26,9 @@ public class Doctor {
     @JoinColumn(name = "department_id", nullable = false)
     private Department department;
 
+
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "user_id", unique = true)
     private User user;
 
     @Builder.Default

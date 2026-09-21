@@ -23,7 +23,7 @@ public class Pharmacist {
     private String defaultCounter; // counter or station where the pharmacist is usually assigned
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "user_id", unique = true)
     private User user;
 
     @Builder.Default
