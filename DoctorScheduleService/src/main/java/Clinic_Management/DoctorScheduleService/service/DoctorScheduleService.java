@@ -143,11 +143,13 @@ public class DoctorScheduleService {
             throw new IllegalStateException("Khung giờ này đã kín lịch cho tất cả bác sĩ.");
         }
 
-        // save the assignment to the database
+        Department department = departmentRepository.findById(departmentId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy chuyên khoa ID: " + departmentId));
+
         SlotAssignment assignment = SlotAssignment.builder()
                 .ticketNumber(ticketNumber)
                 .doctor(selectedDoctor)
-                .departmentId(departmentId)
+                .department(department) // Sửa departmentId thành department
                 .appointmentDate(date)
                 .slotStartTime(slotStartTime)
                 .build();
@@ -215,5 +217,15 @@ public class DoctorScheduleService {
                         .session(s.getSession())
                         .build())
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public boolean validateDepartmentRoster(Long departmentId, LocalDate shiftDate, ShiftSession session) {
+        long outpatientCount = shiftRepository.countByDepartmentIdAndShiftDateAndSessionAndDutyType(
+                departmentId, shiftDate, session, DutyType.OUTPATIENT);
+        long inpatientCount = shiftRepository.countByDepartmentIdAndShiftDateAndSessionAndDutyType(
+                departmentId, shiftDate, session, DutyType.INPATIENT);
+
+        return outpatientCount >= 1 && inpatientCount >= 1;
     }
 }
