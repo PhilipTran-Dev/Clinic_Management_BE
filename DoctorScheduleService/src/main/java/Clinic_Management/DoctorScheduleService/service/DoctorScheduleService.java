@@ -1,14 +1,9 @@
 package Clinic_Management.DoctorScheduleService.service;
 
 
-import Clinic_Management.DoctorScheduleService.dto.AssignDoctorResponse;
-import Clinic_Management.DoctorScheduleService.dto.CreateShiftRequest;
-import Clinic_Management.DoctorScheduleService.dto.TimeSlotResponse;
+import Clinic_Management.DoctorScheduleService.dto.*;
 import Clinic_Management.DoctorScheduleService.entity.*;
-import Clinic_Management.DoctorScheduleService.repository.DepartmentRepository;
-import Clinic_Management.DoctorScheduleService.repository.DoctorRepository;
-import Clinic_Management.DoctorScheduleService.repository.DoctorShiftRepository;
-import Clinic_Management.DoctorScheduleService.repository.SlotAssignmentRepository;
+import Clinic_Management.DoctorScheduleService.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +20,8 @@ public class DoctorScheduleService {
     private final DoctorRepository doctorRepository;
     private final DepartmentRepository departmentRepository;
     private final SlotAssignmentRepository slotAssignmentRepository;
+    private final UserRepository userRepository;
+    private final StaffShiftRepository staffShiftRepository;
 
     /**
      * 1. Subcribe caseshift for a doctor in a department on a specific date and session
@@ -165,5 +162,58 @@ public class DoctorScheduleService {
                 .slotStartTime(slotStartTime)
                 .message("Phân bổ bác sĩ thành công theo cơ chế cân bằng tải.")
                 .build();
+    }
+
+    @Transactional
+    public StaffShiftResponse registerStaffShift(CreateStaffShiftRequest request) {
+        User user = userRepository.findById(request.getUserId())
+                .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + request.getUserId()));
+
+        if (user.getRole() != Role.NURSE && user.getRole() != Role.PHARMACIST) {
+            throw new IllegalArgumentException("Station shifts are only applicable for NURSE or PHARMACIST roles.");
+        }
+
+        StaffShift shift = StaffShift.builder()
+                .user(user)
+                .staffName(user.getFullName())
+                .role(user.getRole())
+                .assignedLocation(request.getAssignedLocation())
+                .shiftDate(request.getShiftDate())
+                .session(request.getSession())
+                .build();
+
+        StaffShift saved = staffShiftRepository.save(shift);
+
+        return StaffShiftResponse.builder()
+                .shiftId(saved.getId())
+                .userId(user.getId())
+                .staffName(saved.getStaffName())
+                .role(saved.getRole())
+                .assignedLocation(saved.getAssignedLocation())
+                .shiftDate(saved.getShiftDate())
+                .session(saved.getSession())
+                .build();
+    }
+
+    /**
+     * 5. Retrieve scheduled shifts for staff on a specific date
+     */
+    @Transactional(readOnly = true)
+    public List<StaffShiftResponse> getStaffShifts(LocalDate date, Role role) {
+        List<StaffShift> shifts = (role == null)
+                ? staffShiftRepository.findByShiftDate(date)
+                : staffShiftRepository.findByShiftDateAndRole(date, role);
+
+        return shifts.stream()
+                .map(s -> StaffShiftResponse.builder()
+                        .shiftId(s.getId())
+                        .userId(s.getUser().getId())
+                        .staffName(s.getStaffName())
+                        .role(s.getRole())
+                        .assignedLocation(s.getAssignedLocation())
+                        .shiftDate(s.getShiftDate())
+                        .session(s.getSession())
+                        .build())
+                .toList();
     }
 }

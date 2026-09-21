@@ -4,13 +4,13 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "doctors")
+@Table(name = "pharmacists")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Doctor {
+public class Pharmacist {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -18,13 +18,9 @@ public class Doctor {
     @Column(nullable = false)
     private String fullName;
 
-    private String title;       // e.g. "PGS.TS", "BS.CKI"
+    private String licenseNumber; // e.g. "CCHN-00912/HCM"
 
-    private String roomNumber;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "department_id", nullable = false)
-    private Department department;
+    private String defaultCounter; // counter or station where the pharmacist is usually assigned
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")

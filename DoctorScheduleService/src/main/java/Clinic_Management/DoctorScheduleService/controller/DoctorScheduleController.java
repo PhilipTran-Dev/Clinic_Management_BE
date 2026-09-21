@@ -1,9 +1,8 @@
 package Clinic_Management.DoctorScheduleService.controller;
 
-import Clinic_Management.DoctorScheduleService.dto.AssignDoctorResponse;
-import Clinic_Management.DoctorScheduleService.dto.CreateShiftRequest;
-import Clinic_Management.DoctorScheduleService.dto.TimeSlotResponse;
+import Clinic_Management.DoctorScheduleService.dto.*;
 import Clinic_Management.DoctorScheduleService.entity.DoctorShift;
+import Clinic_Management.DoctorScheduleService.entity.Role;
 import Clinic_Management.DoctorScheduleService.service.DoctorScheduleService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -47,5 +46,19 @@ public class DoctorScheduleController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.TIME) LocalTime slotStartTime,
             @RequestParam String ticketNumber) {
         return ResponseEntity.ok(scheduleService.assignDoctorToSlot(departmentId, date, slotStartTime, ticketNumber));
+    }
+
+    @PostMapping("/staff-shifts")
+    @Operation(summary = "Admin assigns shift for Nurse or Pharmacist at specific station/counter")
+    public ResponseEntity<StaffShiftResponse> registerStaffShift(@Valid @RequestBody CreateStaffShiftRequest request) {
+        return ResponseEntity.ok(scheduleService.registerStaffShift(request));
+    }
+
+    @GetMapping("/staff-shifts")
+    @Operation(summary = "Get roster of Nurses and Pharmacists on duty by date")
+    public ResponseEntity<List<StaffShiftResponse>> getStaffShifts(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(required = false) Role role) {
+        return ResponseEntity.ok(scheduleService.getStaffShifts(date, role));
     }
 }

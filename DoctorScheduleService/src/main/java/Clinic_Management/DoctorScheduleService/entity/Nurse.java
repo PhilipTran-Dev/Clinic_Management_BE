@@ -4,13 +4,13 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "doctors")
+@Table(name = "nurses")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Doctor {
+public class Nurse {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -18,12 +18,12 @@ public class Doctor {
     @Column(nullable = false)
     private String fullName;
 
-    private String title;       // e.g. "PGS.TS", "BS.CKI"
+    private String qualification; // University degree or certification
 
-    private String roomNumber;
+    private String assignedStation; // Workstation or department where the nurse is assigned
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "department_id", nullable = false)
+    @JoinColumn(name = "department_id")
     private Department department;
 
     @OneToOne(fetch = FetchType.LAZY)

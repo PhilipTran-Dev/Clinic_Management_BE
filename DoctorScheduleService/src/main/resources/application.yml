@@ -3,7 +3,7 @@ server:
 
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/clinic_management_locals
+    url: jdbc:postgresql://localhost:5432/clinic_management_doctorschedule_service
     username: postgres
     password: 123
     driver-class-name: org.postgresql.Driver
