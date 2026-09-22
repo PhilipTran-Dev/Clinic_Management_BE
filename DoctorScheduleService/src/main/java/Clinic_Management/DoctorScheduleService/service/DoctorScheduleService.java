@@ -49,7 +49,8 @@ public class DoctorScheduleService {
                 .shiftDate(request.getShiftDate())
                 .session(request.getSession())
                 .dutyType(request.getDutyType())
-                .maxPatientsPerSlot(4) // Default: 4 patients per 60-minute block[cite: 1, 2]
+                .maxPatientsPerSlot(4)
+                .roomNumber(request.getRoomNumber() != null ? request.getRoomNumber() : doctor.getRoomNumber())
                 .build();
 
         return shiftRepository.save(shift);
@@ -95,7 +96,6 @@ public class DoctorScheduleService {
                 continue;
             }
 
-            // Compute total capacity once per session instead of recalculating inside the slot loop
             int totalCapacity = shiftsInSession.stream()
                     .mapToInt(DoctorShift::getMaxPatientsPerSlot)
                     .sum();
@@ -105,12 +105,13 @@ public class DoctorScheduleService {
                 LocalTime slotStart = current;
                 LocalTime slotEnd = current.plusHours(1);
 
+                // Đếm tải thực tế, bỏ qua các ca đã hủy (CANCELLED)
                 long bookedCount = slotAssignmentRepository
-                        .countByDepartmentIdAndAppointmentDateAndSlotStartTime(departmentId, date, slotStart);
+                        .countByDepartmentIdAndAppointmentDateAndSlotStartTimeAndStatusNot(
+                                departmentId, date, slotStart, AssignmentStatus.CANCELLED);
 
                 int availableCapacity = Math.max(0, totalCapacity - (int) bookedCount);
 
-                // Lock slot if the start time has already passed today
                 boolean isPastSlot = isToday && slotStart.isBefore(nowTime);
                 boolean isAvailable = availableCapacity > 0 && !isPastSlot;
 
@@ -174,8 +175,10 @@ public class DoctorScheduleService {
 
         for (DoctorShift shift : activeShifts) {
             Doctor doctor = shift.getDoctor();
+            // count patient number waiting for the doctor at the given date and time slot, excluding CANCELLED assignments
             long currentAssigned = slotAssignmentRepository
-                    .countByDoctorIdAndAppointmentDateAndSlotStartTime(doctor.getId(), date, slotStartTime);
+                    .countByDoctorIdAndAppointmentDateAndSlotStartTimeAndStatusNot(
+                            doctor.getId(), date, slotStartTime, AssignmentStatus.CANCELLED);
 
             if (currentAssigned < shift.getMaxPatientsPerSlot() && currentAssigned < minPatientCount) {
                 minPatientCount = currentAssigned;
@@ -188,7 +191,6 @@ public class DoctorScheduleService {
             throw new IllegalStateException("Time slot " + slotStartTime + " is fully booked for all on-duty doctors.");
         }
 
-        // Lưu đầy đủ thông tin, khắc phục lỗi PropertyValueException
         SlotAssignment assignment = SlotAssignment.builder()
                 .ticketNumber(request.getTicketNumber())
                 .doctor(selectedDoctor)
@@ -217,6 +219,7 @@ public class DoctorScheduleService {
                 .message("Doctor assigned successfully via Least-Busy load balancing.")
                 .build();
     }
+
     /**
      * 4. Register a duty shift for Nurse or Pharmacist personnel.
      */
@@ -322,7 +325,6 @@ public class DoctorScheduleService {
         return doctorRepository.findByDepartmentIdAndActiveTrue(departmentId);
     }
 
-
     @Transactional(readOnly = true)
     public List<DoctorShiftResponse> getShiftsByDepartmentAndDate(Long departmentId, LocalDate date) {
         return shiftRepository.findByDepartmentIdAndShiftDate(departmentId, date)
@@ -368,5 +370,4 @@ public class DoctorScheduleService {
                         .build())
                 .toList();
     }
-
 }
