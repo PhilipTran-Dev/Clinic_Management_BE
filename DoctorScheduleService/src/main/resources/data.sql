@@ -159,7 +159,18 @@ INSERT INTO doctor_shifts (doctor_id, department_id, shift_date, session, duty_t
 -- 7. LƯỢT ĐẶT MẪU ĐỂ TEST CÂN BẰNG TẢI (SLOT ASSIGNMENTS)
 -- Giả lập ngày mai Khoa 2 slot 07:30 đã có 2 bệnh nhân
 -- ====================================================================
-INSERT INTO slot_assignments (ticket_number, doctor_id, department_id, appointment_date, slot_start_time, status) VALUES
-                                                                                                                      ('#A-101', 4, 2, CURRENT_DATE + 1, '07:30:00', 'BOOKED'),
-                                                                                                                      ('#A-102', 4, 2, CURRENT_DATE + 1, '07:30:00', 'BOOKED')
+INSERT INTO slot_assignments (
+    ticket_number,
+    doctor_id,
+    department_id,
+    appointment_date,
+    slot_start_time,
+    status,
+    patient_name,
+    patient_phone,
+    insurance_code,
+    chief_complaint
+) VALUES
+      ('#A-101', 4, 2, CURRENT_DATE + 1, '07:30:00', 'BOOKED', 'Nguyễn Văn An', '0912345678', 'DN 4 79 79 12345678', 'Sốt cao, đau rát họng 2 ngày nay'),
+      ('#A-102', 4, 2, CURRENT_DATE + 1, '07:30:00', 'BOOKED', 'Trần Thị Mai', '0912345679', 'DN 4 79 79 87654321', 'Khó thở cấp, rít thanh quản')
     ON CONFLICT (ticket_number) DO NOTHING;
