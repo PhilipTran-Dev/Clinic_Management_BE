@@ -82,13 +82,13 @@ public class DoctorScheduleController {
         return ResponseEntity.ok(scheduleService.getDoctorsByDepartment(departmentId));
     }
 
+
     @GetMapping("/shifts")
     @Operation(summary = "Xem lịch trực bác sĩ theo ngày và chuyên khoa")
-    public ResponseEntity<List<DoctorShift>> getShifts(
+    public ResponseEntity<List<DoctorShiftResponse>> getShifts(
             @RequestParam Long departmentId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         return ResponseEntity.ok(scheduleService.getShiftsByDepartmentAndDate(departmentId, date));
     }
-
 
 }

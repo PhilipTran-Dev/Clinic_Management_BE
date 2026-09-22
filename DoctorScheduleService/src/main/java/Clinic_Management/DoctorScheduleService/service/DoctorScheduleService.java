@@ -311,7 +311,27 @@ public class DoctorScheduleService {
         return doctorRepository.findByDepartmentIdAndActiveTrue(departmentId);
     }
 
-    public List<DoctorShift> getShiftsByDepartmentAndDate(Long departmentId, LocalDate date) {
-        return shiftRepository.findByDepartmentIdAndShiftDate(departmentId, date);
+
+    @Transactional(readOnly = true)
+    public List<DoctorShiftResponse> getShiftsByDepartmentAndDate(Long departmentId, LocalDate date) {
+        return shiftRepository.findByDepartmentIdAndShiftDate(departmentId, date)
+                .stream()
+                .map(shift -> DoctorShiftResponse.builder()
+                        .id(shift.getId())
+                        .doctor(DoctorReference.builder()
+                                .id(shift.getDoctor().getId())
+                                .fullName(shift.getDoctor().getFullName())
+                                .title(shift.getDoctor().getTitle())
+                                .roomNumber(shift.getRoomNumber() != null ? shift.getRoomNumber() : shift.getDoctor().getRoomNumber())
+                                .build())
+                        .departmentId(shift.getDepartment().getId())
+                        .departmentName(shift.getDepartment().getName())
+                        .shiftDate(shift.getShiftDate())
+                        .session(shift.getSession())
+                        .dutyType(shift.getDutyType())
+                        .maxPatientsPerSlot(shift.getMaxPatientsPerSlot())
+                        .roomNumber(shift.getRoomNumber())
+                        .build())
+                .toList();
     }
 }
