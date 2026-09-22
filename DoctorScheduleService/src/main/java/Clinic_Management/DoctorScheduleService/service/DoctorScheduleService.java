@@ -302,4 +302,16 @@ public class DoctorScheduleService {
                     "Morning (07:30, 08:30, 09:30, 10:30) or Afternoon (13:00, 14:00, 15:00, 16:00).");
         }
     }
+
+    public List<Department> getAllDepartments() {
+        return departmentRepository.findAll();
+    }
+
+    public List<Doctor> getDoctorsByDepartment(Long departmentId) {
+        return doctorRepository.findByDepartmentIdAndActiveTrue(departmentId);
+    }
+
+    public List<DoctorShift> getShiftsByDepartmentAndDate(Long departmentId, LocalDate date) {
+        return shiftRepository.findByDepartmentIdAndShiftDate(departmentId, date);
+    }
 }

@@ -1,9 +1,7 @@
 package Clinic_Management.DoctorScheduleService.controller;
 
 import Clinic_Management.DoctorScheduleService.dto.*;
-import Clinic_Management.DoctorScheduleService.entity.DoctorShift;
-import Clinic_Management.DoctorScheduleService.entity.Role;
-import Clinic_Management.DoctorScheduleService.entity.ShiftSession;
+import Clinic_Management.DoctorScheduleService.entity.*;
 import Clinic_Management.DoctorScheduleService.service.DoctorScheduleService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -71,4 +69,26 @@ public class DoctorScheduleController {
             @RequestParam ShiftSession session) {
         return ResponseEntity.ok(scheduleService.validateDepartmentRoster(departmentId, date, session));
     }
+
+    @GetMapping("/departments")
+    @Operation(summary = "Lấy danh mục tất cả chuyên khoa")
+    public ResponseEntity<List<Department>> getDepartments() {
+        return ResponseEntity.ok(scheduleService.getAllDepartments());
+    }
+
+    @GetMapping("/doctors")
+    @Operation(summary = "Lấy danh sách bác sĩ theo chuyên khoa")
+    public ResponseEntity<List<Doctor>> getDoctors(@RequestParam Long departmentId) {
+        return ResponseEntity.ok(scheduleService.getDoctorsByDepartment(departmentId));
+    }
+
+    @GetMapping("/shifts")
+    @Operation(summary = "Xem lịch trực bác sĩ theo ngày và chuyên khoa")
+    public ResponseEntity<List<DoctorShift>> getShifts(
+            @RequestParam Long departmentId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return ResponseEntity.ok(scheduleService.getShiftsByDepartmentAndDate(departmentId, date));
+    }
+
+
 }
