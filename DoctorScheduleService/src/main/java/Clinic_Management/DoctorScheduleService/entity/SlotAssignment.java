@@ -51,4 +51,6 @@ public class SlotAssignment {
 
     @Column(name = "chief_complaint", length = 500)
     private String chiefComplaint;
+
+    
 }

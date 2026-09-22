@@ -23,4 +23,6 @@ public interface DoctorShiftRepository extends JpaRepository<DoctorShift, Long> 
     List<DoctorShift> findByDepartmentIdAndShiftDateBetween(
             Long departmentId, LocalDate startDate, LocalDate endDate
     );
+
+
 }

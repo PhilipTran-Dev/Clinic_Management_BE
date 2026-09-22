@@ -136,7 +136,11 @@ public class DoctorScheduleService {
      * and slotStartTime adheres to standard 60-minute blocks[cite: 1].
      */
     @Transactional
-    public AssignDoctorResponse assignDoctorToSlot(Long departmentId, LocalDate date, LocalTime slotStartTime, String ticketNumber) {
+    public AssignDoctorResponse assignDoctorToSlot(AssignDoctorRequest request) {
+        LocalDate date = request.getAppointmentDate();
+        LocalTime slotStartTime = request.getSlotStartTime();
+        Long departmentId = request.getDepartmentId();
+
         if (date.isBefore(LocalDate.now())) {
             throw new IllegalArgumentException("Cannot schedule appointments in the past.");
         }
@@ -145,10 +149,8 @@ public class DoctorScheduleService {
             throw new IllegalArgumentException("Time slot " + slotStartTime + " has already passed for today.");
         }
 
-        // Validate 60-minute slot boundaries and determine the shift session (Morning / Afternoon)[cite: 1, 2]
         ShiftSession session = determineAndValidateSession(slotStartTime);
 
-        // Validate minimum roster requirements before assigning
         if (!validateDepartmentRoster(departmentId, date, session)) {
             throw new IllegalStateException("Department shift is not compliant to accept patients (Requires at least 1 Outpatient and 1 Inpatient doctor).");
         }
@@ -166,8 +168,8 @@ public class DoctorScheduleService {
             throw new IllegalStateException("No outpatient doctors on duty for this session.");
         }
 
-        // Least-Busy load balancing algorithm: Select doctor with the fewest assigned patients in this slot[cite: 1, 2]
         Doctor selectedDoctor = null;
+        DoctorShift selectedShift = null;
         long minPatientCount = Long.MAX_VALUE;
 
         for (DoctorShift shift : activeShifts) {
@@ -178,6 +180,7 @@ public class DoctorScheduleService {
             if (currentAssigned < shift.getMaxPatientsPerSlot() && currentAssigned < minPatientCount) {
                 minPatientCount = currentAssigned;
                 selectedDoctor = doctor;
+                selectedShift = shift;
             }
         }
 
@@ -185,27 +188,35 @@ public class DoctorScheduleService {
             throw new IllegalStateException("Time slot " + slotStartTime + " is fully booked for all on-duty doctors.");
         }
 
+        // Lưu đầy đủ thông tin, khắc phục lỗi PropertyValueException
         SlotAssignment assignment = SlotAssignment.builder()
-                .ticketNumber(ticketNumber)
+                .ticketNumber(request.getTicketNumber())
                 .doctor(selectedDoctor)
                 .department(department)
                 .appointmentDate(date)
                 .slotStartTime(slotStartTime)
                 .status(AssignmentStatus.BOOKED)
+                .patientName(request.getPatientName())
+                .patientPhone(request.getPatientPhone())
+                .insuranceCode(request.getInsuranceCode())
+                .chiefComplaint(request.getChiefComplaint())
                 .build();
         slotAssignmentRepository.save(assignment);
 
+        String assignedRoom = selectedShift.getRoomNumber() != null
+                ? selectedShift.getRoomNumber()
+                : selectedDoctor.getRoomNumber();
+
         return AssignDoctorResponse.builder()
-                .ticketNumber(ticketNumber)
+                .ticketNumber(request.getTicketNumber())
                 .doctorId(selectedDoctor.getId())
                 .doctorName(selectedDoctor.getFullName())
-                .roomNumber(selectedDoctor.getRoomNumber())
+                .roomNumber(assignedRoom)
                 .date(date)
                 .slotStartTime(slotStartTime)
                 .message("Doctor assigned successfully via Least-Busy load balancing.")
                 .build();
     }
-
     /**
      * 4. Register a duty shift for Nurse or Pharmacist personnel.
      */
