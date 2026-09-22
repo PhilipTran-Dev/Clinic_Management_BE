@@ -91,4 +91,12 @@ public class DoctorScheduleController {
         return ResponseEntity.ok(scheduleService.getShiftsByDepartmentAndDate(departmentId, date));
     }
 
+    @GetMapping("/shifts/weekly")
+    @Operation(summary = "Lấy lịch trực tuần của bác sĩ theo chuyên khoa và khoảng ngày")
+    public ResponseEntity<List<DoctorShiftResponse>> getWeeklyShifts(
+            @RequestParam Long departmentId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        return ResponseEntity.ok(scheduleService.getWeeklyShifts(departmentId, startDate, endDate));
+    }
 }

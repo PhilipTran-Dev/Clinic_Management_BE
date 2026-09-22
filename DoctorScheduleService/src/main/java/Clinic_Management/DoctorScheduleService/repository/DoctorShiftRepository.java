@@ -20,4 +20,7 @@ public interface DoctorShiftRepository extends JpaRepository<DoctorShift, Long> 
     long countByDepartmentIdAndShiftDateAndSessionAndDutyType(
             Long departmentId, LocalDate shiftDate, ShiftSession session, DutyType dutyType
     );
+    List<DoctorShift> findByDepartmentIdAndShiftDateBetween(
+            Long departmentId, LocalDate startDate, LocalDate endDate
+    );
 }
