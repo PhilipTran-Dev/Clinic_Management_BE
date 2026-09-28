@@ -1,5 +1,6 @@
 package Clinic_Management.DoctorScheduleService.controller;
 
+import Clinic_Management.DoctorScheduleService.dto.AssignDoctorRequest;
 import Clinic_Management.DoctorScheduleService.dto.AssignDoctorResponse;
 import Clinic_Management.DoctorScheduleService.dto.CreateShiftRequest;
 import Clinic_Management.DoctorScheduleService.dto.TimeSlotResponse;
@@ -41,11 +42,12 @@ public class DoctorScheduleController {
 
     @PostMapping("/assign-doctor")
     @Operation(summary = "Phân bổ bác sĩ cho bệnh nhân vào slot (Cân bằng tải Least-Busy)")
-    public ResponseEntity<AssignDoctorResponse> assignDoctor(
-            @RequestParam Long departmentId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.TIME) LocalTime slotStartTime,
-            @RequestParam String ticketNumber) {
-        return ResponseEntity.ok(scheduleService.assignDoctorToSlot(departmentId, date, slotStartTime, ticketNumber));
+    public ResponseEntity<AssignDoctorResponse> assignDoctor(@Valid @RequestBody AssignDoctorRequest request) {
+        return ResponseEntity.ok(scheduleService.assignDoctorToSlot(
+                request.getDepartmentId(),
+                request.getAppointmentDate(),
+                request.getSlotStartTime(),
+                request.getTicketNumber()
+        ));
     }
 }
