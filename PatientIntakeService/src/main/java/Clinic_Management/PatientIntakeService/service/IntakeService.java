@@ -1,6 +1,5 @@
 package Clinic_Management.PatientIntakeService.service;
 
-
 import Clinic_Management.PatientIntakeService.clients.ScheduleServiceClient;
 import Clinic_Management.PatientIntakeService.dto.AdministrativeIntakeRequest;
 import Clinic_Management.PatientIntakeService.dto.IntakeResponse;
@@ -13,6 +12,7 @@ import Clinic_Management.PatientIntakeService.repository.PatientRepository;
 import Clinic_Management.PatientIntakeService.repository.QueueTicketRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,61 +27,83 @@ public class IntakeService {
     private final QueueTicketRepository queueTicketRepository;
     private final ScheduleServiceClient scheduleClient;
 
+    private static final int MAX_TICKET_GEN_RETRIES = 3;
+
     @Transactional
     public IntakeResponse processIntake(AdministrativeIntakeRequest request) {
         Patient patient = resolvePatient(request);
 
-        String ticketNumber = generateTicketNumber(request.getDepartmentId(), request.getAppointmentDate());
+        QueueTicket savedTicket = null;
+        ScheduleAssignDoctorResponse doctorAssignment = null;
+        int attempts = 0;
 
-        ScheduleAssignDoctorResponse doctorAssignment = scheduleClient.assignDoctor(
-                ScheduleAssignDoctorRequest.builder()
+        while (attempts < MAX_TICKET_GEN_RETRIES) {
+            attempts++;
+            String ticketNumber = generateTicketNumber(request.getDepartmentId(), request.getAppointmentDate(), attempts - 1);
+
+            try {
+                doctorAssignment = scheduleClient.assignDoctor(
+                        ScheduleAssignDoctorRequest.builder()
+                                .departmentId(request.getDepartmentId())
+                                .appointmentDate(request.getAppointmentDate())
+                                .slotStartTime(request.getSlotStartTime())
+                                .ticketNumber(ticketNumber)
+                                .patientName(patient.getFullName())
+                                .patientPhone(patient.getPhone())
+                                .insuranceCode(patient.getInsuranceCode())
+                                .chiefComplaint(request.getChiefComplaint())
+                                .build()
+                );
+
+                QueueTicket ticket = QueueTicket.builder()
+                        .ticketNumber(ticketNumber)
+                        .patient(patient)
                         .departmentId(request.getDepartmentId())
+                        .departmentName(request.getDepartmentName())
+                        .doctorId(doctorAssignment.getDoctorId())
+                        .doctorName(doctorAssignment.getDoctorName())
+                        .roomNumber(doctorAssignment.getRoomNumber())
                         .appointmentDate(request.getAppointmentDate())
                         .slotStartTime(request.getSlotStartTime())
-                        .ticketNumber(ticketNumber)
-                        .patientName(patient.getFullName())
-                        .patientPhone(patient.getPhone())
-                        .insuranceCode(patient.getInsuranceCode())
+                        .priorityLevel(request.getPriorityLevel())
+                        .intakeSource(request.getIntakeSource())
+                        .status(QueueStatus.WAITING)
                         .chiefComplaint(request.getChiefComplaint())
-                        .build()
-        );
+                        .build();
 
-        QueueTicket ticket = QueueTicket.builder()
-                .ticketNumber(ticketNumber)
-                .patient(patient)
-                .departmentId(request.getDepartmentId())
-                .departmentName(request.getDepartmentName())
-                .doctorId(doctorAssignment.getDoctorId())
-                .doctorName(doctorAssignment.getDoctorName())
-                .roomNumber(doctorAssignment.getRoomNumber())
-                .appointmentDate(request.getAppointmentDate())
-                .slotStartTime(request.getSlotStartTime())
-                .priorityLevel(request.getPriorityLevel())
-                .intakeSource(request.getIntakeSource())
-                .status(QueueStatus.WAITING)
-                .chiefComplaint(request.getChiefComplaint())
-                .build();
+                savedTicket = queueTicketRepository.saveAndFlush(ticket);
+                break;
 
-        queueTicketRepository.save(ticket);
+            } catch (DataIntegrityViolationException ex) {
+                log.warn("Đụng độ mã số vé {} tại khoa {} ngày {}. Đang thử lại lần {}...",
+                        ticketNumber, request.getDepartmentId(), request.getAppointmentDate(), attempts);
+                if (attempts >= MAX_TICKET_GEN_RETRIES) {
+                    throw new IllegalStateException("Hệ thống tiếp đón đang quá tải lượt cấp số. Vui lòng thử lại sau giây lát.");
+                }
+            } catch (Exception ex) {
+                log.error("Lỗi trong quá trình tiếp nhận bệnh nhân {}: {}", patient.getFullName(), ex.getMessage());
+                throw ex;
+            }
+        }
 
-        log.info("Bệnh nhân {} đã được tiếp nhận thành công. Phiếu: {}, Phòng: {}",
-                patient.getFullName(), ticketNumber, doctorAssignment.getRoomNumber());
+        log.info("Tiếp nhận thành công BN: {}, Mã phiếu: {}, Phòng khám: {}",
+                patient.getFullName(), savedTicket.getTicketNumber(), savedTicket.getRoomNumber());
 
         return IntakeResponse.builder()
-                .ticketNumber(ticket.getTicketNumber())
+                .ticketNumber(savedTicket.getTicketNumber())
                 .patientId(patient.getId())
                 .patientName(patient.getFullName())
                 .insuranceCode(patient.getInsuranceCode())
-                .departmentId(ticket.getDepartmentId())
-                .departmentName(ticket.getDepartmentName())
-                .doctorId(ticket.getDoctorId())
-                .doctorName(ticket.getDoctorName())
-                .roomNumber(ticket.getRoomNumber())
-                .appointmentDate(ticket.getAppointmentDate())
-                .slotStartTime(ticket.getSlotStartTime())
-                .priorityLevel(ticket.getPriorityLevel())
-                .checkInTime(ticket.getCheckInTime())
-                .message("Tiếp nhận thành công. Vui lòng di chuyển đến phòng khám.")
+                .departmentId(savedTicket.getDepartmentId())
+                .departmentName(savedTicket.getDepartmentName())
+                .doctorId(savedTicket.getDoctorId())
+                .doctorName(savedTicket.getDoctorName())
+                .roomNumber(savedTicket.getRoomNumber())
+                .appointmentDate(savedTicket.getAppointmentDate())
+                .slotStartTime(savedTicket.getSlotStartTime())
+                .priorityLevel(savedTicket.getPriorityLevel())
+                .checkInTime(savedTicket.getCheckInTime())
+                .message("Tiếp nhận thành công. Vui lòng di chuyển đến phòng khám được chỉ định.")
                 .build();
     }
 
@@ -116,15 +138,17 @@ public class IntakeService {
 
     private Patient updatePatientDetails(Patient patient, AdministrativeIntakeRequest req) {
         patient.setFullName(req.getFullName().trim());
-        if (req.getPhone() != null) patient.setPhone(req.getPhone());
-        if (req.getAddress() != null) patient.setAddress(req.getAddress());
-        if (req.getInitialHospitalCode() != null) patient.setInitialHospitalCode(req.getInitialHospitalCode());
+        if (req.getPhone() != null && !req.getPhone().isBlank()) patient.setPhone(req.getPhone());
+        if (req.getAddress() != null && !req.getAddress().isBlank()) patient.setAddress(req.getAddress());
+        if (req.getInitialHospitalCode() != null && !req.getInitialHospitalCode().isBlank()) {
+            patient.setInitialHospitalCode(req.getInitialHospitalCode());
+        }
         if (Boolean.TRUE.equals(req.getIsOcrVerified())) patient.setIsOcrVerified(true);
         return patientRepository.save(patient);
     }
 
-    private String generateTicketNumber(Long departmentId, LocalDate date) {
-        long currentCount = queueTicketRepository.countByAppointmentDateAndDepartmentId(date, departmentId) + 1;
+    private String generateTicketNumber(Long departmentId, LocalDate date, int offset) {
+        long currentCount = queueTicketRepository.countByAppointmentDateAndDepartmentId(date, departmentId) + 1 + offset;
         String prefix = switch (departmentId.intValue()) {
             case 1 -> "A"; // Khoa Nội Tổng quát & Tim mạch
             case 2 -> "B"; // Khoa Hô hấp & Dị ứng

@@ -1,4 +1,5 @@
 package Clinic_Management.PatientIntakeService.controller;
+import Clinic_Management.PatientIntakeService.dto.QueueTicketDetailResponse;
 import Clinic_Management.PatientIntakeService.entity.QueueStatus;
 import Clinic_Management.PatientIntakeService.entity.QueueTicket;
 import Clinic_Management.PatientIntakeService.service.QueueService;
@@ -21,7 +22,7 @@ public class QueueController {
     private final QueueService queueService;
 
     @GetMapping("/doctor/{doctorId}")
-    @Operation(summary = "Lấy danh sách hàng đợi đang chờ của Bác sĩ (theo độ ưu tiên P1 -> P2 -> P3)")
+    @Operation(summary = "Lấy danh sách hàng đợi đang hoạt động của Bác sĩ (ưu tiên P1 -> slotStartTime -> P2/P3)")
     public ResponseEntity<List<QueueTicket>> getDoctorQueue(
             @PathVariable Long doctorId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
@@ -30,7 +31,7 @@ public class QueueController {
     }
 
     @PostMapping("/doctor/{doctorId}/call-next")
-    @Operation(summary = "Bác sĩ gọi bệnh nhân kế tiếp vào phòng")
+    @Operation(summary = "Bác sĩ gọi bệnh nhân kế tiếp vào phòng (tự động chặn nếu đang có ca dở dang)")
     public ResponseEntity<QueueTicket> callNext(
             @PathVariable Long doctorId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
@@ -38,8 +39,14 @@ public class QueueController {
         return ResponseEntity.ok(queueService.callNextPatient(doctorId, targetDate));
     }
 
+    @GetMapping("/tickets/{ticketNumber}")
+    @Operation(summary = "Lấy thông tin chi tiết phiếu khám kèm hồ sơ bệnh nhân (Dành cho màn hình EHR Bác sĩ)")
+    public ResponseEntity<QueueTicketDetailResponse> getTicketDetails(@PathVariable String ticketNumber) {
+        return ResponseEntity.ok(queueService.getTicketDetails(ticketNumber));
+    }
+
     @PatchMapping("/tickets/{ticketNumber}/status")
-    @Operation(summary = "Cập nhật trạng thái phiếu (SKIPPED, COMPLETED, CANCELLED)")
+    @Operation(summary = "Cập nhật trạng thái phiếu (IN_CONSULTATION, COMPLETED, SKIPPED, CANCELLED)")
     public ResponseEntity<QueueTicket> updateStatus(
             @PathVariable String ticketNumber,
             @RequestParam QueueStatus status) {

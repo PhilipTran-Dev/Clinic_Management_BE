@@ -3,16 +3,27 @@ package Clinic_Management.PatientIntakeService.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 
 @Entity
-@Table(name = "queue_tickets", indexes = {
-        @Index(name = "idx_ticket_date_dept_status", columnList = "appointment_date, department_id, status"),
-        @Index(name = "idx_ticket_doctor_queue", columnList = "appointment_date, doctor_id, status")
-})
+@Table(
+        name = "queue_tickets",
+        indexes = {
+                @Index(name = "idx_ticket_date_dept_status", columnList = "appointment_date, department_id, status"),
+                @Index(name = "idx_ticket_doctor_queue", columnList = "appointment_date, doctor_id, status, slot_start_time"),
+                @Index(name = "idx_ticket_number", columnList = "ticket_number")
+        },
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_queue_ticket_date_number",
+                        columnNames = {"appointment_date", "ticket_number"}
+                )
+        }
+)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -73,4 +84,8 @@ public class QueueTicket {
 
     @Column(name = "called_at")
     private LocalDateTime calledAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 }
