@@ -1,0 +1,125 @@
+version: '3.8'
+
+services:
+  # =========================================================================
+  # 1. PostgreSQL Database Service
+  # =========================================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: clinic-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "123"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - clinic-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # =========================================================================
+  # 2. AuthService (Port 8085)
+  # =========================================================================
+  auth-service:
+    build:
+      context: ./AuthService
+      dockerfile: Dockerfile
+    container_name: clinic-auth-service
+    restart: on-failure
+    ports:
+      - "8085:8085"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/clinic_management_auth_service
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: "123"
+      JWT_SECRET: ClinicManagementSuperSecretKeyForJWTAuthTokenGeneration2026Secure
+      JWT_EXPIRATION_MS: 86400000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - clinic-network
+
+  # =========================================================================
+  # 3. DoctorScheduleService (Port 8081)
+  # =========================================================================
+  doctor-schedule-service:
+    build:
+      context: ./DoctorScheduleService
+      dockerfile: Dockerfile
+    container_name: clinic-doctor-schedule-service
+    restart: on-failure
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/clinic_management_doctorschedule_service
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: "123"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - clinic-network
+
+  # =========================================================================
+  # 4. PatientIntakeService (Port 8082)
+  # =========================================================================
+  patient-intake-service:
+    build:
+      context: ./PatientIntakeService
+      dockerfile: Dockerfile
+    container_name: clinic-patient-intake-service
+    restart: on-failure
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/clinic_management_patientintake_service
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: "123"
+      SERVICES_DOCTOR_SCHEDULE_BASE_URL: http://doctor-schedule-service:8081/api/v1/schedules
+    depends_on:
+      postgres:
+        condition: service_healthy
+      doctor-schedule-service:
+        condition: service_started
+    networks:
+      - clinic-network
+
+  # =========================================================================
+  # 5. ClinicalConsultationService (Port 8083)
+  # =========================================================================
+  clinical-consultation-service:
+    build:
+      context: ./ClinicalConsultationService
+      dockerfile: Dockerfile
+    container_name: clinic-consultation-service
+    restart: on-failure
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/clinic_management_clinicalconsultation_service
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: "123"
+      SERVICES_PATIENT_INTAKE_BASE_URL: http://patient-intake-service:8082/api/v1/queue
+    depends_on:
+      postgres:
+        condition: service_healthy
+      patient-intake-service:
+        condition: service_started
+    networks:
+      - clinic-network
+
+networks:
+  clinic-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
