@@ -27,6 +27,7 @@
 		<module>DoctorScheduleService</module>
 		<module>PatientIntakeService</module>
 		<module>ClinicalConsultationService</module>
+		<module>AuthService</module>
 	</modules>
 
 	<dependencyManagement>
