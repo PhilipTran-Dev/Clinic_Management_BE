@@ -3,6 +3,7 @@ package Clinic_Management.DoctorScheduleService.service;
 
 import Clinic_Management.DoctorScheduleService.dto.AssignDoctorResponse;
 import Clinic_Management.DoctorScheduleService.dto.CreateShiftRequest;
+import Clinic_Management.DoctorScheduleService.dto.DoctorShiftResponse;
 import Clinic_Management.DoctorScheduleService.dto.TimeSlotResponse;
 import Clinic_Management.DoctorScheduleService.entity.*;
 import Clinic_Management.DoctorScheduleService.repository.DepartmentRepository;
@@ -164,6 +165,58 @@ public class DoctorScheduleService {
                 .date(date)
                 .slotStartTime(slotStartTime)
                 .message("Phân bổ bác sĩ thành công theo cơ chế cân bằng tải.")
+                .build();
+    }
+    @Transactional(readOnly = true)
+    public List<Department> getAllDepartments() {
+        return departmentRepository.findAll();
+    }
+
+    @Transactional(readOnly = true)
+    public List<Doctor> getDoctorsByDepartment(Long departmentId) {
+        return doctorRepository.findByDepartmentIdAndActiveTrue(departmentId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<DoctorShiftResponse> getShiftsByDate(Long departmentId, LocalDate date) {
+        return shiftRepository.findByDepartmentIdAndShiftDate(departmentId, date).stream()
+                .map(this::mapToShiftResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<DoctorShiftResponse> getWeeklyShifts(Long departmentId, LocalDate startDate, LocalDate endDate) {
+        return shiftRepository.findByDepartmentIdAndShiftDateBetweenOrderByShiftDateAsc(departmentId, startDate, endDate).stream()
+                .map(this::mapToShiftResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public boolean validateRosterCompliance(Long departmentId, LocalDate date, ShiftSession session) {
+        long outpatientCount = shiftRepository.countByDepartmentIdAndShiftDateAndSessionAndDutyType(
+                departmentId, date, session, DutyType.OUTPATIENT);
+        long inpatientCount = shiftRepository.countByDepartmentIdAndShiftDateAndSessionAndDutyType(
+                departmentId, date, session, DutyType.INPATIENT);
+
+        return outpatientCount >= 1 && inpatientCount >= 1;
+    }
+
+    private DoctorShiftResponse mapToShiftResponse(DoctorShift shift) {
+        return DoctorShiftResponse.builder()
+                .id(shift.getId())
+                .doctor(DoctorShiftResponse.DoctorReference.builder()
+                        .id(shift.getDoctor().getId())
+                        .fullName(shift.getDoctor().getFullName())
+                        .title(shift.getDoctor().getTitle())
+                        .roomNumber(shift.getDoctor().getRoomNumber())
+                        .build())
+                .departmentId(shift.getDepartment().getId())
+                .departmentName(shift.getDepartment().getName())
+                .shiftDate(shift.getShiftDate())
+                .session(shift.getSession())
+                .dutyType(shift.getDutyType())
+                .maxPatientsPerSlot(shift.getMaxPatientsPerSlot())
+                .roomNumber(shift.getDoctor().getRoomNumber())
                 .build();
     }
 }
