@@ -1,0 +1,20 @@
+package Clinic_Management.ClinicalConsultationService.repository;
+
+import Clinic_Management.ClinicalConsultationService.entity.Prescription;
+import Clinic_Management.ClinicalConsultationService.entity.PrescriptionStatus;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.Optional;
+
+@Repository
+public interface PrescriptionRepository extends JpaRepository<Prescription, Long> {
+    @Query("SELECT p FROM Prescription p JOIN FETCH p.items WHERE p.status = :status ORDER BY p.createdAt ASC")
+    List<Prescription> findQueueByStatus(@Param("status") PrescriptionStatus status);
+
+    @Query("SELECT p FROM Prescription p JOIN FETCH p.items WHERE p.id = :id")
+    Optional<Prescription> findByIdWithItems(@Param("id") Long id);
+}
