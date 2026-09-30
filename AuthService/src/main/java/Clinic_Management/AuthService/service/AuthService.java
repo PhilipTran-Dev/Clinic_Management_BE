@@ -1,9 +1,6 @@
 package Clinic_Management.AuthService.service;
 
-import Clinic_Management.AuthService.dto.AuthResponse;
-import Clinic_Management.AuthService.dto.CreateStaffRequest;
-import Clinic_Management.AuthService.dto.LoginRequest;
-import Clinic_Management.AuthService.dto.RegisterPatientRequest;
+import Clinic_Management.AuthService.dto.*;
 import Clinic_Management.AuthService.entity.User;
 import Clinic_Management.AuthService.entity.UserRole;
 import Clinic_Management.AuthService.repository.UserRepository;
@@ -14,6 +11,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -113,17 +112,83 @@ public class AuthService {
         return mapToAuthResponse(user, token);
     }
 
+    @Transactional(readOnly = true)
+    public List<AuthResponse> getAllPatients() {
+        return userRepository.findByRoleOrderByCreatedAtDesc(UserRole.PATIENT).stream()
+                .map(patient -> mapToAuthResponse(patient, null))
+                .toList();
+    }
+
+    @Transactional
+    public AuthResponse updatePatientByAdmin(Long patientId, UpdatePatientRequest request) {
+        User patient = userRepository.findById(patientId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy bệnh nhân có ID: " + patientId));
+
+        if (patient.getRole() != UserRole.PATIENT) {
+            throw new IllegalArgumentException("Tài khoản này không phải là Bệnh nhân");
+        }
+
+        applyPatientUpdates(patient, request);
+        User updated = userRepository.save(patient);
+        log.info("Admin đã cập nhật hồ sơ Bệnh nhân #{}: {}", patientId, patient.getFullName());
+
+        return mapToAuthResponse(updated, null);
+    }
+
+    @Transactional
+    public AuthResponse updateMyProfile(String token, UpdatePatientRequest request) {
+        if (token != null && token.startsWith("Bearer ")) {
+            token = token.substring(7);
+        }
+
+        if (!jwtProvider.validateToken(token)) {
+            throw new IllegalArgumentException("Token không hợp lệ hoặc đã hết hạn");
+        }
+
+        String email = jwtProvider.extractClaims(token).getSubject();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy người dùng"));
+
+        applyPatientUpdates(user, request);
+        User updated = userRepository.save(user);
+        log.info("Bệnh nhân {} đã tự cập nhật hồ sơ và thẻ BHYT", email);
+
+        return mapToAuthResponse(updated, token);
+    }
+
+    private void applyPatientUpdates(User user, UpdatePatientRequest req) {
+        user.setFullName(req.getFullName().trim());
+        if (req.getPhone() != null) user.setPhone(req.getPhone().trim());
+        if (req.getIdentityCardNumber() != null) user.setIdentityCardNumber(req.getIdentityCardNumber().trim());
+        if (req.getInsuranceCode() != null) user.setInsuranceCode(req.getInsuranceCode().trim().toUpperCase());
+        if (req.getInitialHospitalCode() != null) user.setInitialHospitalCode(req.getInitialHospitalCode().trim());
+        if (req.getDateOfBirth() != null) user.setDateOfBirth(req.getDateOfBirth());
+        if (req.getGender() != null) user.setGender(req.getGender());
+        if (req.getAddress() != null) user.setAddress(req.getAddress().trim());
+        if (req.getIsOcrVerified() != null) user.setIsOcrVerified(req.getIsOcrVerified());
+    }
+
     private AuthResponse mapToAuthResponse(User user, String token) {
         return AuthResponse.builder()
                 .token(token)
                 .userId(user.getId())
                 .email(user.getEmail())
                 .fullName(user.getFullName())
+                .phone(user.getPhone())
                 .role(user.getRole())
+                .active(user.getActive())
                 .departmentId(user.getDepartmentId())
                 .departmentName(user.getDepartmentName())
                 .doctorId(user.getDoctorId())
                 .pharmacistId(user.getPharmacistId())
+                .identityCardNumber(user.getIdentityCardNumber())
+                .insuranceCode(user.getInsuranceCode())
+                .initialHospitalCode(user.getInitialHospitalCode())
+                .dateOfBirth(user.getDateOfBirth())
+                .gender(user.getGender())
+                .address(user.getAddress())
+                .isOcrVerified(user.getIsOcrVerified())
+                .createdAt(user.getCreatedAt())
                 .build();
     }
 }
