@@ -20,6 +20,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/schedules")
+@CrossOrigin(origins = "*")
 @RequiredArgsConstructor
 @Tag(name = "Doctor Schedule API", description = "Quản lý lịch trực bác sĩ và slot khám")
 public class DoctorScheduleController {
