@@ -184,4 +184,10 @@ public class ConsultationService {
                 .createdAt(e.getCreatedAt())
                 .build();
     }
+    @Transactional(readOnly = true)
+    public List<EncounterResponse> getPatientHistory(Long patientId) {
+        return encounterRepository.findPatientHistory(patientId).stream()
+                .map(encounter -> mapToEncounterResponse(encounter, null))
+                .toList();
+    }
 }

@@ -11,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/v1/clinical/encounters")
 @RequiredArgsConstructor
@@ -32,5 +34,10 @@ public class ConsultationController {
             @PathVariable Long id,
             @Valid @RequestBody CompleteEncounterRequest request) {
         return ResponseEntity.ok(consultationService.completeEncounter(id, request));
+    }
+    @GetMapping("/patient/{patientId}")
+    @Operation(summary = "Lấy toàn bộ lịch sử bệnh án và chẩn đoán ICD-10 của bệnh nhân")
+    public ResponseEntity<List<EncounterResponse>> getPatientHistory(@PathVariable Long patientId) {
+        return ResponseEntity.ok(consultationService.getPatientHistory(patientId));
     }
 }

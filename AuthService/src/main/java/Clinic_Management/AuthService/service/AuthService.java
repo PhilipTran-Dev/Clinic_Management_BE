@@ -191,4 +191,38 @@ public class AuthService {
                 .createdAt(user.getCreatedAt())
                 .build();
     }
+    @Transactional(readOnly = true)
+    public List<AuthResponse> getAllStaff() {
+        List<UserRole> staffRoles = List.of(
+                UserRole.ADMIN,
+                UserRole.DOCTOR,
+                UserRole.NURSE,
+                UserRole.RECEPTIONIST,
+                UserRole.PHARMACIST
+        );
+        return userRepository.findByRoleInOrderByCreatedAtDesc(staffRoles).stream()
+                .map(user -> mapToAuthResponse(user, null))
+                .toList();
+    }
+    @Transactional
+    public AuthResponse toggleUserStatus(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy người dùng có ID: " + userId));
+
+        user.setActive(!Boolean.TRUE.equals(user.getActive()));
+        User updated = userRepository.save(user);
+        log.info("Admin đã thay đổi trạng thái user {} sang: active={}", user.getEmail(), updated.getActive());
+
+        return mapToAuthResponse(updated, null);
+    }
+
+    @Transactional
+    public void resetStaffPassword(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy người dùng có ID: " + userId));
+
+        user.setPassword(passwordEncoder.encode("password123"));
+        userRepository.save(user);
+        log.info("Admin đã reset mật khẩu tài khoản {} về 'password123'", user.getEmail());
+    }
 }

@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -62,5 +63,24 @@ public class AuthController {
             @RequestHeader("Authorization") String authHeader,
             @Valid @RequestBody UpdatePatientRequest request) {
         return ResponseEntity.ok(authService.updateMyProfile(authHeader, request));
+    }
+
+    @GetMapping("/admin/users")
+    @Operation(summary = "Lấy danh sách tất cả nhân sự cho Admin")
+    public ResponseEntity<List<AuthResponse>> getAllStaff() {
+        return ResponseEntity.ok(authService.getAllStaff());
+    }
+
+    @PatchMapping("/admin/users/{id}/toggle-status")
+    @Operation(summary = "Admin khóa hoặc mở khóa tài khoản nhân sự")
+    public ResponseEntity<AuthResponse> toggleUserStatus(@PathVariable Long id) {
+        return ResponseEntity.ok(authService.toggleUserStatus(id));
+    }
+
+    @PostMapping("/admin/users/{id}/reset-password")
+    @Operation(summary = "Admin đặt lại mật khẩu nhân sự về mặc định (password123)")
+    public ResponseEntity<Map<String, String>> resetStaffPassword(@PathVariable Long id) {
+        authService.resetStaffPassword(id);
+        return ResponseEntity.ok(Map.of("message", "Đã đặt lại mật khẩu về 'password123' thành công"));
     }
 }
