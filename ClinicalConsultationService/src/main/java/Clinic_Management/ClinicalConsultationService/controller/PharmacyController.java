@@ -6,6 +6,7 @@ import Clinic_Management.ClinicalConsultationService.entity.PrescriptionStatus;
 import Clinic_Management.ClinicalConsultationService.service.PharmacyService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,7 +16,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/pharmacy")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 @Tag(name = "Pharmacy Management API", description = "Dành cho Dược sĩ: Hàng đợi đơn thuốc, trừ tồn kho và cấp phát")
 public class PharmacyController {
 
@@ -47,5 +47,27 @@ public class PharmacyController {
     @Operation(summary = "Lấy danh mục thuốc khả dụng trong kho phục vụ kê đơn")
     public ResponseEntity<List<Drug>> getDrugs() {
         return ResponseEntity.ok(pharmacyService.getActiveDrugs());
+    }
+
+    @PostMapping("/drugs")
+    @Operation(summary = "Admin thêm loại thuốc mới vào kho dược")
+    public ResponseEntity<Drug> createDrug(@Valid @RequestBody Clinic_Management.ClinicalConsultationService.dto.CreateDrugRequest request) {
+        return ResponseEntity.ok(pharmacyService.createDrug(request));
+    }
+
+    @PutMapping("/drugs/{id}")
+    @Operation(summary = "Admin cập nhật thông tin, đơn giá hoặc tỷ lệ BHYT của thuốc")
+    public ResponseEntity<Drug> updateDrug(
+            @PathVariable Long id,
+            @Valid @RequestBody Clinic_Management.ClinicalConsultationService.dto.UpdateDrugRequest request) {
+        return ResponseEntity.ok(pharmacyService.updateDrug(id, request));
+    }
+
+    @PatchMapping("/drugs/{id}/stock")
+    @Operation(summary = "Admin nhập thêm hoặc điều chỉnh tồn kho thuốc")
+    public ResponseEntity<Drug> adjustStock(
+            @PathVariable Long id,
+            @Valid @RequestBody Clinic_Management.ClinicalConsultationService.dto.AdjustStockRequest request) {
+        return ResponseEntity.ok(pharmacyService.adjustDrugStock(id, request.getQuantityChange()));
     }
 }

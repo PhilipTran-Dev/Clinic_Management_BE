@@ -16,7 +16,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/clinical/encounters")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 @Tag(name = "Clinical Consultation API", description = "Dành cho Bác sĩ: Khám bệnh, nhập hồ sơ SOAP, chẩn đoán ICD-10 và kê đơn")
 public class ConsultationController {
 

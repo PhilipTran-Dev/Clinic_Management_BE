@@ -116,4 +116,67 @@ public class PharmacyService {
                 .items(itemResponses)
                 .build();
     }
+
+    @Transactional
+    public Drug createDrug(Clinic_Management.ClinicalConsultationService.dto.CreateDrugRequest req) {
+        if (drugRepository.findByCode(req.getCode().trim().toUpperCase()).isPresent()) {
+            throw new IllegalStateException("Mã thuốc " + req.getCode() + " đã tồn tại trong kho.");
+        }
+
+        Drug drug = Drug.builder()
+                .code(req.getCode().trim().toUpperCase())
+                .name(req.getName().trim())
+                .concentration(req.getConcentration().trim())
+                .dosageForm(req.getDosageForm().trim())
+                .stockQuantity(req.getStockQuantity())
+                .unitPrice(req.getUnitPrice())
+                .bhytCoverage(req.getBhytCoverage())
+                .isPenicillinClass(Boolean.TRUE.equals(req.getIsPenicillinClass()))
+                .active(true)
+                .build();
+
+        Drug saved = drugRepository.save(drug);
+        log.info("Admin đã thêm mới thuốc vào kho: {} (Mã {})", saved.getName(), saved.getCode());
+        return saved;
+    }
+
+    @Transactional
+    public Drug updateDrug(Long id, Clinic_Management.ClinicalConsultationService.dto.UpdateDrugRequest req) {
+        Drug drug = drugRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy thuốc có ID: " + id));
+
+        drug.setName(req.getName().trim());
+        drug.setConcentration(req.getConcentration().trim());
+        drug.setDosageForm(req.getDosageForm().trim());
+        drug.setUnitPrice(req.getUnitPrice());
+        drug.setStockQuantity(req.getStockQuantity());
+        drug.setBhytCoverage(req.getBhytCoverage());
+        drug.setIsPenicillinClass(Boolean.TRUE.equals(req.getIsPenicillinClass()));
+        if (req.getActive() != null) {
+            drug.setActive(req.getActive());
+        }
+
+        Drug updated = drugRepository.save(drug);
+        log.info("Admin đã cập nhật thông tin thuốc #{}: {}", id, updated.getName());
+        return updated;
+    }
+
+    @Transactional
+    public Drug adjustDrugStock(Long id, Integer quantityChange) {
+        Drug drug = drugRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy thuốc có ID: " + id));
+
+        int newStock = drug.getStockQuantity() + quantityChange;
+        if (newStock < 0) {
+            throw new IllegalStateException(String.format(
+                    "Không thể giảm tồn kho xuống dưới 0. Tồn hiện tại: %d, lượng giảm: %d",
+                    drug.getStockQuantity(), Math.abs(quantityChange)
+            ));
+        }
+
+        drug.setStockQuantity(newStock);
+        Drug updated = drugRepository.save(drug);
+        log.info("Điều chỉnh tồn kho thuốc #{}: {} -> {}", id, drug.getStockQuantity() - quantityChange, newStock);
+        return updated;
+    }
 }
