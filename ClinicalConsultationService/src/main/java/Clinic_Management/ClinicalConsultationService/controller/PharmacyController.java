@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/pharmacy")
+@RequestMapping({"/api/v1/pharmacy", "/api/v1/clinical/pharmacy"})
 @RequiredArgsConstructor
 @Tag(name = "Pharmacy Management API", description = "Dành cho Dược sĩ: Hàng đợi đơn thuốc, trừ tồn kho và cấp phát")
 public class PharmacyController {
